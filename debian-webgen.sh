@@ -207,7 +207,7 @@ fi
 
 # Requesting certificates for domains
 domains="$(printf "$WBMainURI $WBAliasURI" | sed -E 's/ /,/g;')"
-certbot --non-interactive --agree-tos -m "$WBEmail" -d "$domains"
+certbot --apache -n --agree-tos -m "$WBEmail" -d "$domains"
 
 # Deleting .ssh folder
 rm -r /root/.ssh

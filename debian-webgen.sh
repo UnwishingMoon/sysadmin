@@ -175,6 +175,7 @@ GRANT ALL PRIVILEGES ON ${ExDBName}.* TO '${DBUserName}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
 
+# If PHP-FPM enable other settings
 if [ "$PHPType" = "fpm" ]; then
     apt install -yq php-fpm libapache2-mod-fcgid
     a2dismod "php$PHPVersion" mpm_prefork

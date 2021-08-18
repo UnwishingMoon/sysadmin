@@ -167,11 +167,11 @@ mysql -u root <<_EOF_
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${DBRootPass}';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-DROP DATABASE IF EXISTS test;
+DROP DATABASE IF EXISTS `test`;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-CREATE DATABASE ${DBName};
+CREATE DATABASE `${DBName}`;
 CREATE USER '${DBUserName}'@'localhost' IDENTIFIED BY '${DBUserPass}';
-GRANT ALL PRIVILEGES ON ${ExDBName}.* TO '${DBUserName}'@'localhost';
+GRANT ALL PRIVILEGES ON `${ExDBName}`.* TO '${DBUserName}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
 

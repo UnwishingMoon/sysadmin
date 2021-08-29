@@ -72,7 +72,7 @@ chmod 700 /home/gitlab/.ssh/
 chmod 600 /home/gitlab/.ssh/authorized_keys
 
 # Generating SSH key for gitlab user
-ssh-keygen -b 4096 -t rsa -m PEM -C "gitlab@$WBMainURI" -f "/root/gitlab-runner.pem" -N ""
+ssh-keygen -b 4096 -t rsa -m PEM -C "gitlab@${WBMainURI}" -f "/root/gitlab-runner.pem" -N ""
 cat /root/gitlab-runner.pem.pub > /home/gitlab/.ssh/authorized_keys
 chmod 600 /root/gitlab-runner.pem /root/gitlab-runner.pem.pub
 
@@ -155,11 +155,11 @@ install -m 640 -o root -g adm /dev/null "/var/log/apache2/${WBMainURI}_access.lo
 
 # Setting up webserver folders
 rm -r "/var/www/html"
-mkdir -p "/var/www/$WBMainURI/www/"
-chown admin:admin "/var/www/$WBMainURI/"
-chown gitlab:gitlab "/var/www/$WBMainURI/www/"
-chmod -R 775 "/var/www/$WBMainURI/"
-chmod -R g+s "/var/www/$WBMainURI/"
+mkdir -p "/var/www/${WBMainURI}/www/"
+chown admin:admin "/var/www/${WBMainURI}/"
+chown gitlab:gitlab "/var/www/${WBMainURI}/www/"
+chmod -R 775 "/var/www/${WBMainURI}/"
+chmod -R g+s "/var/www/${WBMainURI}/"
 
 # Basic database setup
 ExDBName=$(printf "$DBName" | sed -E 's/[_]+/\\_/g')
@@ -178,14 +178,39 @@ _EOF_
 # If PHP-FPM enable other settings
 if [ "$PHPType" = "fpm" ]; then
     apt install -yq php-fpm libapache2-mod-fcgid
-    a2dismod "php$PHPVersion" mpm_prefork
+    a2dismod "php${PHPVersion}" mpm_prefork
     a2enmod mpm_event proxy_fcgi proxy
-    a2enconf "php$PHPVersion-fpm"
+    a2enconf "php${PHPVersion}-fpm"
     install -m 640 -o www-data -g www-data /dev/null "/var/log/php-${WBMainURI}.log"
-    sed --follow-symlinks -i '/fcgi:\/\/localhost"/a\        ProxyErrorOverride On' "/etc/apache2/conf-available/php$PHPVersion-fpm.conf"   # Adding ProxyErrorOverride to apache2 conf
     sed --follow-symlinks -i "/^disable_functions = / s/$/\passthru,shell_exec,system,proc_open,popen,parse_ini_file,show_source,/" "/etc/php/${PHPVersion}/fpm/php.ini"       # Disabling insecure PHP functions
     sed --follow-symlinks -i "/^error_reporting =/c\error_reporting = E_ALL \& ~E_DEPRECATED \& ~E_STRICT \& ~E_NOTICE \& ~E_WARNING" "/etc/php/${PHPVersion}/fpm/php.ini"      # Excluding Notice and Warning error reporting
     sed --follow-symlinks -i "/^allow_url_fopen =/c\allow_url_fopen = Off" "/etc/php/${PHPVersion}/fpm/php.ini"         # Disabling url_fopen
+
+    # Configuring default fpm conf
+    printf "# Redirect to local php-fpm if mod_php is not available
+<IfModule !mod_php7.c>
+    <IfModule proxy_fcgi_module>
+        # Enable http authorization headers
+        <IfModule setenvif_module>
+            SetEnvIfNoCase ^Authorization$ \"(.+)\" HTTP_AUTHORIZATION=$1
+        </IfModule>
+
+        <FilesMatch \".+\.ph(ar|p|tml)$\">
+            SetHandler \"proxy:unix:/run/php/php${PHPVersion}-fpm.sock|fcgi://localhost\"
+            ProxyErrorOverride On
+        </FilesMatch>
+
+        # Deny access to raw php sources by default
+        <FilesMatch \".+\.phps$\">
+            Require all denied
+        </FilesMatch>
+
+        # Deny access to files without filename (e.g. '.php')
+        <FilesMatch \"^\.ph(ar|p|ps|tml)$\">
+            Require all denied
+        </FilesMatch>
+    </IfModule>
+</IfModule>" > "/etc/apache2/conf-available/php${PHPVersion}-fpm"
 
     # Configuring default pool
     printf "[www]

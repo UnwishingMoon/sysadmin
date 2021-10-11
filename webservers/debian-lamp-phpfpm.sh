@@ -1,12 +1,11 @@
 #!/bin/sh
 #########################################################
 #                                                       #
-#   Name: Debian Webserver Generator                    #
+#   Name: Debian based LAMP generator                   #
 #   Author: Diego Castagna (diegocastagna.com)          #
-#   Description: This script will set-up                #
-#   a webserver with Apache2, MariaDB, PHP              #
-#   and PHPMyAdmin, all passwords                       #
-#   are saved under /root directory                     #
+#   Description: Apache2, MariaDB and PHP-FPM.          #
+#   Certificate will be deployed if supported.          #
+#   All passwords are saved under /root directory       #
 #   Common Usage: AWS User Data                         #
 #   License: diegocastagna.com/license                  #
 #                                                       #

@@ -148,7 +148,7 @@ create_a2_virtual(){
     read -p "Enter all domain aliases separated by space ' ' (leave blank to skip): " aliasURI
 
     # Dir name
-    read -p "Enter a sub-folder name, leave blank to skip ($DirFullPath): " DirName
+    read -p "Enter a sub-folder name, leave blank to skip ($DirFullPath/): " DirName
 
     # Creating folders
     mkdir -p "$DirFullPath"
@@ -163,34 +163,56 @@ create_a2_virtual(){
         chown admin.admin "$DirFullPath"
     fi
 
+    if [ ! -z "$aliasURI" ]; then
+        local aliasURI="$mainURI"
+    fi
+
     # Creating Apache2 Virtualhost
     printf "<VirtualHost *:80>
-        ServerName ${mainURI}
-        ServerAlias ${aliasURI}
-        ServerAdmin webmaster@localhost
-        DocumentRoot ${DirFullPath}
+    ServerName ${mainURI}
+    ServerAlias ${aliasURI}
+    ServerAdmin webmaster@localhost
+    DocumentRoot ${DirFullPath}
 
-        # If mod_php is enabled
-        <IfModule mod_php>
-            php_admin_value open_basedir '/tmp/:/var/www/${mainURI}/'
-        </IfModule>
+    # If mod_php is enabled
+    <IfModule mod_php>
+        php_admin_value open_basedir '/tmp/:/var/www/${mainURI}/'
+    </IfModule>
 
-        # Redirect to local php-fpm if mod_php is not available
-        <IfModule !mod_php>
-            <IfModule proxy_fcgi_module>
-
+    # Redirect to local php-fpm if mod_php is not available
+    <IfModule !mod_php>
+        <IfModule proxy_fcgi_module>
+            # Enable http authorization headers
+            <IfModule setenvif_module>
+                SetEnvIfNoCase ^Authorization$ \"(.+)\" HTTP_AUTHORIZATION=$1
             </IfModule>
+
+            <FilesMatch \".+\.ph(ar|p|tml)$\">
+                SetHandler \"proxy:unix:/run/php/php7.3-fpm.sock|fcgi://localhost\"
+                ProxyErrorOverride On
+            </FilesMatch>
+
+            # Deny access to raw php sources by default
+            <FilesMatch \".+\.phps$\">
+                Require all denied
+            </FilesMatch>
+
+            # Deny access to files without filename (e.g. '.php')
+            <FilesMatch \"^\.ph(ar|p|ps|tml)$\">
+                Require all denied
+            </FilesMatch>
         </IfModule>
+    </IfModule>
 
-        # Logs
-        LogLevel error
-        ErrorLog \${APACHE_LOG_DIR}/${mainURI}_error.log
-        CustomLog \${APACHE_LOG_DIR}/${mainURI}_access.log combined
+    # Logs
+    LogLevel error
+    ErrorLog \${APACHE_LOG_DIR}/${mainURI}_error.log
+    CustomLog \${APACHE_LOG_DIR}/${mainURI}_access.log combined
 
-        <Directory ${DirFullPath}/>
-            Options -Indexes +SymLinksIfOwnerMatch -Includes
-            AllowOverride All
-        </Directory>
+    <Directory ${DirFullPath}/>
+        Options -Indexes +SymLinksIfOwnerMatch -Includes
+        AllowOverride All
+    </Directory>
     </VirtualHost>" > "/etc/apache2/sites-available/${mainURI}.conf"
 
     # Creating Access and Error logs
@@ -199,7 +221,7 @@ create_a2_virtual(){
     install -m 640 -o www-data -g www-data /dev/null "/var/log/php-${mainURI}.log"
 
     # Enabling site and reloading apache2
-    a2ensite "${mainURI}.conf"
+    a2ensite -q "${mainURI}.conf"
     service apache2 reload
 
     printf "Done.\n"
@@ -243,9 +265,9 @@ secure_a2_phpadmin(){
 
     sed --follow-symlinks -i "/DirectoryIndex index.php/a\    AllowOverride All" /etc/apache2/conf-available/phpmyadmin.conf
     printf 'AuthType Basic
-    Authname "Restricted files"
-    AuthUserFile /etc/phpmyadmin/.htpasswd
-    Require valid-user' > /usr/share/phpmyadmin/.htaccess
+Authname "Restricted files"
+AuthUserFile /etc/phpmyadmin/.htpasswd
+Require valid-user' > /usr/share/phpmyadmin/.htaccess
     htpasswd -bc /etc/phpmyadmin/.htpasswd "$HtUser" "$HtPass"
 
     if [ "$autogen" -eq 1 ]; then

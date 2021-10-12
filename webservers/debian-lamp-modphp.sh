@@ -26,7 +26,7 @@ DBPMAPass=$(openssl rand -base64 32)    # Auto-generated phpmyadmin user passwor
 HtPass=$(openssl rand -base64 32)       # Auto-generated htaccess password
 
 # Constants - Editing this is up to you!
-AWSCliUrl="https://www.diegocastagna.com/files/awscli.tar.xz"
+AWSCliUrl="https://www.diegocastagna.com/files/awscli.tar.xz"   # Just the awscli but with tar.xz compression
 
 ## Main Program ##
 
@@ -37,10 +37,10 @@ if [ $(id -u) -ne 0 ]; then
 fi
 
 # Saving all generated passwords. FILE SHOULD BE DELETED LATER!
-printf "Root:$DBRootPass\n" >> /root/dbpass.txt
-printf "User:$DBUserPass\n" >> /root/dbpass.txt
-printf "PHPMyAdmin:$DBPMAPass\n" >> /root/dbpass.txt
-printf "Htaccess:$HtUser $HtPass\n" >> /root/dbpass.txt
+printf "Root:$DBRootPass
+User:$DBUserPass
+PHPMyAdmin:$DBPMAPass
+Htaccess:$HtUser $HtPass" > /root/dbpass.txt
 chmod 600 /root/dbpass.txt
 
 # Updating and installing packages
@@ -51,7 +51,6 @@ printf "phpmyadmin phpmyadmin/mysql/admin-pass password $DBRootPass" | debconf-s
 printf "phpmyadmin phpmyadmin/app-password-confirm password $DBPMAPass" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/mysql/app-pass password $DBPMAPass" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" | debconf-set-selections
-apt install -yqt buster-backports php-twig
 apt install -yq apache2 mariadb-server php libapache2-mod-php php-mysqli php-cli php-yaml php-xml php-mbstring php-zip php-gd php-curl php-twig snapd phpmyadmin
 printf PURGE | debconf-communicate phpmyadmin
 
@@ -61,22 +60,8 @@ snap refresh core
 snap install --classic certbot
 ln -s /snap/bin/certbot /usr/bin/certbot
 
-# Creating gitlab user and .ssh files
-adduser --disabled-password gitlab
-mkdir -p /home/gitlab/.ssh
-touch /home/gitlab/.ssh/authorized_keys
-chown -R gitlab.gitlab /home/gitlab/.ssh/
-chmod 700 /home/gitlab/.ssh/
-chmod 600 /home/gitlab/.ssh/authorized_keys
-
-# Generating SSH key for gitlab user
-ssh-keygen -b 4096 -t rsa -m PEM -C "gitlab@${WBMainURI}" -f "/root/gitlab-runner.pem" -N ""
-cat /root/gitlab-runner.pem.pub > /home/gitlab/.ssh/authorized_keys
-chmod 600 /root/gitlab-runner.pem /root/gitlab-runner.pem.pub
-
 # Adding groups to users
-usermod -aG www-data,gitlab admin
-usermod -aG www-data gitlab
+usermod -aG www-data admin
 
 # Creating scripts and backups folders
 mkdir /root/scripts/
@@ -92,7 +77,7 @@ chmod 400 /root/.my.cnf
 
 # Updating AWS Cli
 apt -yq remove awscli
-wget -U "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36" -O /root/awscli.tar.xz "$AWSCliUrl"
+wget -U "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36" -O /root/awscli.tar.xz "$AWSCliUrl"
 tar -xf /root/awscli.tar.xz -C /root/
 bash /root/aws/install
 rm -r /root/aws/
@@ -154,8 +139,7 @@ install -m 640 -o root -g adm /dev/null "/var/log/apache2/${WBMainURI}_access.lo
 # Setting up webserver folders
 rm -r "/var/www/html"
 mkdir -p "/var/www/${WBMainURI}/www/"
-chown admin:admin "/var/www/${WBMainURI}/"
-chown gitlab:gitlab "/var/www/${WBMainURI}/www/"
+chown -R admin:admin "/var/www/${WBMainURI}/"
 chmod -R 775 "/var/www/${WBMainURI}/"
 chmod -R g+s "/var/www/${WBMainURI}/"
 
@@ -172,62 +156,6 @@ CREATE USER '${DBUserName}'@'localhost' IDENTIFIED BY '${DBUserPass}';
 GRANT ALL PRIVILEGES ON `${ExDBName}`.* TO '${DBUserName}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
-
-# If PHP-FPM enable other settings
-if [ "$PHPType" = "fpm" ]; then
-    apt install -yq php-fpm libapache2-mod-fcgid
-    a2dismod "php${PHPVersion}" mpm_prefork
-    a2enmod mpm_event proxy_fcgi proxy
-    a2enconf "php${PHPVersion}-fpm"
-    install -m 640 -o www-data -g www-data /dev/null "/var/log/php-${WBMainURI}.log"
-    sed --follow-symlinks -i "/^disable_functions = / s/$/\passthru,shell_exec,system,proc_open,popen,parse_ini_file,show_source,/" "/etc/php/${PHPVersion}/fpm/php.ini"       # Disabling insecure PHP functions
-    sed --follow-symlinks -i "/^error_reporting =/c\error_reporting = E_ALL \& ~E_DEPRECATED \& ~E_STRICT \& ~E_NOTICE \& ~E_WARNING" "/etc/php/${PHPVersion}/fpm/php.ini"      # Excluding Notice and Warning error reporting
-    sed --follow-symlinks -i "/^allow_url_fopen =/c\allow_url_fopen = Off" "/etc/php/${PHPVersion}/fpm/php.ini"         # Disabling url_fopen
-
-    # Configuring default fpm conf
-    printf "# Redirect to local php-fpm if mod_php is not available
-<IfModule !mod_php7.c>
-    <IfModule proxy_fcgi_module>
-        # Enable http authorization headers
-        <IfModule setenvif_module>
-            SetEnvIfNoCase ^Authorization$ \"(.+)\" HTTP_AUTHORIZATION=$1
-        </IfModule>
-
-        <FilesMatch \".+\.ph(ar|p|tml)$\">
-            SetHandler \"proxy:unix:/run/php/php${PHPVersion}-fpm.sock|fcgi://localhost\"
-            ProxyErrorOverride On
-        </FilesMatch>
-
-        # Deny access to raw php sources by default
-        <FilesMatch \".+\.phps$\">
-            Require all denied
-        </FilesMatch>
-
-        # Deny access to files without filename (e.g. '.php')
-        <FilesMatch \"^\.ph(ar|p|ps|tml)$\">
-            Require all denied
-        </FilesMatch>
-    </IfModule>
-</IfModule>" > "/etc/apache2/conf-available/php${PHPVersion}-fpm"
-
-    # Configuring default pool
-    printf "[www]
-user = www-data
-group = www-data
-listen = /run/php/php${PHPVersion}-fpm.sock
-listen.owner = www-data
-listen.group = www-data
-pm = dynamic
-pm.max_children = 5
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 3
-php_admin_flag[log_errors] = on
-php_admin_value[error_log] = /var/log/php-${WBMainURI}.log
-php_admin_value[memory_limit] = 128M
-php_admin_value[open_basedir] = /tmp/:/var/www/${WBMainURI}/
-"> "/etc/php/${PHPVersion}/fpm/pool.d/www.conf"
-fi
 
 # Requesting certificates for domains
 domains="$(printf "$WBMainURI $WBAliasURI" | sed -E 's/ /,/g;')"
@@ -247,7 +175,6 @@ apt autoclean -yq
 # Restarting services with new configurations
 service apache2 stop
 service apache2 start
-service php*-fpm restart
 service mysql restart
 
 touch /root/.done

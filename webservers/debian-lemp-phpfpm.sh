@@ -41,7 +41,7 @@ printf "PHPMyAdmin:$DBPMAPass\n" >> /root/dbpass.txt
 printf "Htaccess:$HtUser $HtPass\n" >> /root/dbpass.txt
 chmod 600 /root/dbpass.txt
 
-# Updating and installing packages
+# Updating and upgrading packages
 apt-get update -yq
 apt-get dist-upgrade -yq
 
@@ -52,7 +52,8 @@ apt-key add nginx_signing.key
 printf "deb https://nginx.org/packages/mainline/debian/ `lsb_release -cs` nginx
 deb-src https://nginx.org/packages/mainline/debian/ `lsb_release -cs` nginx" > /etc/apt/sources.list.d/nginx.list
 
-# All the other packages
+# Installing all the others packages
+apt-get update -yq
 printf "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/mysql/admin-pass password $DBRootPass" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/app-password-confirm password $DBPMAPass" | debconf-set-selections

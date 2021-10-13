@@ -25,9 +25,6 @@ DBUserPass=$(openssl rand -base64 32)   # Auto-generated database user password
 DBPMAPass=$(openssl rand -base64 32)    # Auto-generated phpmyadmin user password
 HtPass=$(openssl rand -base64 32)       # Auto-generated htaccess password
 
-# Constants - Editing this is up to you!
-AWSCliUrl="https://www.diegocastagna.com/files/awscli.tar.xz"   # Just the awscli but with tar.xz compression
-
 ## Main Program ##
 
 # Checking if I'm root
@@ -44,14 +41,14 @@ Htaccess:$HtUser $HtPass" > /root/dbpass.txt
 chmod 600 /root/dbpass.txt
 
 # Updating and installing packages
-apt update -yq
-apt dist-upgrade -yq
+apt-get update -yq
+apt-get dist-upgrade -yq
 printf "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/mysql/admin-pass password $DBRootPass" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/app-password-confirm password $DBPMAPass" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/mysql/app-pass password $DBPMAPass" | debconf-set-selections
 printf "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" | debconf-set-selections
-apt install -yq apache2 mariadb-server php libapache2-mod-php php-mysqli php-cli php-yaml php-xml php-mbstring php-zip php-gd php-curl php-twig snapd phpmyadmin
+apt-get install -yq apache2 mariadb-server php libapache2-mod-php php-mysqli php-cli php-yaml php-xml php-mbstring php-zip php-gd php-curl php-twig snapd phpmyadmin
 printf PURGE | debconf-communicate phpmyadmin
 
 # Installing certbot
@@ -74,14 +71,6 @@ printf "[client]
 user='root'
 password='$DBRootPass'" > /root/.my.cnf
 chmod 400 /root/.my.cnf
-
-# Updating AWS Cli
-apt -yq remove awscli
-wget -U "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36" -O /root/awscli.tar.xz "$AWSCliUrl"
-tar -xf /root/awscli.tar.xz -C /root/
-bash /root/aws/install
-rm -r /root/aws/
-rm /root/awscli.tar.xz
 
 # Ehnancing Apache2 security
 printf 'ServerTokens Prod
@@ -169,12 +158,12 @@ printf "" > /etc/motd                               # Removing default motd
 printf "\nalias ll='ls -alF'\n" >> /etc/profile     # Adding ll alias
 
 # Cleaning and exiting
-apt autoremove -yq
-apt autoclean -yq
+apt-get autoremove -yq
+apt-get autoclean -yq
 
 # Restarting services with new configurations
 service apache2 stop
 service apache2 start
-service mysql restart
+service mariadb restart
 
 touch /root/.done

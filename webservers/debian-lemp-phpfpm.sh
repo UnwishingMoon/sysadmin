@@ -102,14 +102,14 @@ printf "server {
 # Configured hostname
 printf "server {
     listen 80;
-    root  /var/www/{$WBMainURI}/www;
-    server_name {$WBMainURI} {$WBAliasURI};
+    root  /var/www/${WBMainURI}/www;
+    server_name ${WBMainURI} ${WBAliasURI};
 
-    access_log /var/log/nginx/{$WBMainURI}_access.log main;
-    error_log /var/log/nginx/{$WBMainURI}_error.log error;
+    access_log /var/log/nginx/${WBMainURI}_access.log main;
+    error_log /var/log/nginx/${WBMainURI}_error.log error;
 
     location ~ \.php$ {
-        fastcgi_pass   unix:/run/php/php-{$WBMainURI}.sock;
+        fastcgi_pass   unix:/run/php/php-${WBMainURI}.sock;
         fastcgi_index  index.php;
         fastcgi_param  SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         include        fastcgi_params;
@@ -125,7 +125,7 @@ printf "server {
         location ~ ^/phpmyadmin/(.+\.php)$ {
             try_files \$uri =404;
             root /usr/share/;
-            fastcgi_pass unix:/run/php/php-{$WBMainURI}.sock;
+            fastcgi_pass unix:/run/php/php-${WBMainURI}.sock;
             fastcgi_index index.php;
             fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
             include fastcgi_params;
@@ -215,7 +215,7 @@ apt-get autoclean -yq
 # Restarting services with new configurations
 service nginx stop
 service nginx start
-service "php{$PHPVersion}-fpm" restart
+service "php${PHPVersion}-fpm" restart
 service mariadb restart
 
 touch /root/.done

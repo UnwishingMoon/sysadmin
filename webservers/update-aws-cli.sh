@@ -17,7 +17,7 @@ apt-get update -yq
 apt-get install -yq curl
 
 # Removing distribution AWS Cli
-apt-get -yq remove awscli
+apt-get remove -yq awscli
 
 # Downloading the cli
 curl -o /root/awscli.tar.xz "$AWSCliUrl"

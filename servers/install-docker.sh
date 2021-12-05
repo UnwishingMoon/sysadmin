@@ -27,3 +27,7 @@ printf "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/doc
 # Updating and installing docker
 apt-get update -yq
 apt-get install -yq docker-ce docker-ce-cli containerd.io
+
+# Installing docker compose
+curl -fsL "https://github.com/docker/compose/releases/download/v2.1.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose

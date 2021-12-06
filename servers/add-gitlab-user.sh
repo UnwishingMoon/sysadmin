@@ -37,12 +37,9 @@ cat /root/gitlab-runner.pem.pub > /home/gitlab/.ssh/authorized_keys
 chmod 600 /root/gitlab-runner.pem /root/gitlab-runner.pem.pub
 
 # Adding groups to users
-if [ $(getent passwd admin) ]; then
-    usermod -aG gitlab admin
-fi
 if [ $(getent group nginx) ]; then
     usermod -aG nginx gitlab
-else
+fi
 if [ $(getent group www-data) ]; then
     usermod -aG www-data gitlab
 fi

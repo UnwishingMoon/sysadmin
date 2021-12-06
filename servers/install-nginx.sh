@@ -22,7 +22,7 @@ apt-get install -yq curl gnupg2 ca-certificates lsb-release
 curl -fsL https://nginx.org/keys/nginx_signing.key | gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg
 
 # Adding the source
-printf "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/debian `lsb_release -cs` nginx" > /etc/apt/sources.list.d/nginx.list
+printf "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/$(lsb_release -is | awk '{print tolower($0)}') $(lsb_release -cs) nginx" > /etc/apt/sources.list.d/nginx.list
 
 # Pinning the new repository
 printf "Package: *

@@ -14,6 +14,13 @@ if [ $(id -u) -ne 0 ]; then
     exit 1;
 fi
 
+# Installing required packages
+apt-get update -yq
+apt-get install -yq snapd
+
+# Removing certbot if already installed
+apt-get remove -yq certbot
+
 # Installing snapd
 snap install core
 snap refresh core

@@ -43,3 +43,6 @@ fi
 if [ $(getent group www-data) ]; then
     usermod -aG www-data gitlab
 fi
+if [ $(getent group docker) ]; then
+    usermod -aG docker gitlab
+fi

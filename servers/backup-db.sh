@@ -17,7 +17,7 @@ if [ -z "$DBName" ]; then
     exit 0;
 fi
 
-mysqldump -u root --compact --opt --force --add-drop-trigger --single-transaction "$DBName" > "$DBName.sql"
+mysqldump -u root --opt --compact --force --skip-comments --add-drop-trigger --single-transaction "$DBName" > "$DBName.sql"
 
 while [ "$compress" != "y" ] && [ "$compress" != "N" ] && [ "$compress" != "n" ] && [ "$compress" != "N" ]; do
     read -p "Do you want to compress the backup? (Y / N): " compress
